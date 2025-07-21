@@ -2,11 +2,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from backend.config import get_context
-from backend.llm.gemini import GeminiLLM
+from backend.llm.openai import ChatGPT4oMiniLLM
 from backend.schemas import ChatRequest, ChatResponse
 import asyncio
 
-app = FastAPI(title="Reasoning Chatbot (Gemini 2.0 Flash)")
+app = FastAPI(title="Reasoning Chatbot (ChatGPT-4o Mini)")
 
 # Allow embedding in any site (adjust origins as needed)
 app.add_middleware(
@@ -17,12 +17,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-llm = GeminiLLM()
+llm = ChatGPT4oMiniLLM()
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     """
-    Accepts user input, merges with daily context, and returns Gemini response.
+    Accepts user input, merges with daily context, and returns ChatGPT-4o Mini response.
     Stateless: does not store user data.
     """
     context = get_context()
@@ -33,7 +33,7 @@ async def chat_endpoint(request: ChatRequest):
         kw.lower() in user_input.lower() for kw in topic.split("Topic:")[-1:]
     ):
         return ChatResponse(response="Out of scope. Please ask about today's topic only.", out_of_scope=True)
-    # Call Gemini (non-streaming)
+    # Call ChatGPT-4o Mini (non-streaming)
     try:
         chunks = []
         async for chunk in llm.chat(context, user_input, stream=False):

@@ -12,6 +12,6 @@ class LLMBase(ABC):
         stream: bool = False,
     ) -> AsyncGenerator[str, None]:
         """
-        Abstract chat method. Should yield response chunks if stream=True, else yield one full response.
+        Abstract chat method for LLMs (e.g., ChatGPT-4o Mini). Should yield response chunks if stream=True, else yield one full response.
         """
         pass 
