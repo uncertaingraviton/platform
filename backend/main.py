@@ -6,6 +6,7 @@ from backend.llm.openai import ChatGPT4oMiniLLM
 from backend.schemas import ChatRequest, ChatResponse
 import asyncio
 import re
+import httpx
 
 app = FastAPI(title="Reasoning Chatbot (ChatGPT-4o Mini)")
 
@@ -44,6 +45,10 @@ async def chat_endpoint(request: ChatRequest):
         async for chunk in llm.chat(context, user_input, stream=False):
             chunks.append(chunk)
         return ChatResponse(response="".join(chunks))
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 429:
+            return ChatResponse(response="Too many requests. Please wait a moment and try again.", out_of_scope=False)
+        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -70,6 +75,11 @@ async def chat_stream_endpoint(request: ChatRequest):
                         return
             async for chunk in llm.chat(context, user_input, stream=True):
                 yield chunk
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                yield "Too many requests. Please wait a moment and try again."
+                return
+            yield f"[ERROR] {str(e)}"
         except Exception as e:
             yield f"[ERROR] {str(e)}"
     return StreamingResponse(event_stream(), media_type="text/plain") 
