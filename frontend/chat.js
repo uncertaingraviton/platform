@@ -1,5 +1,7 @@
-const API_URL = "/chat"; // Adjust if backend is on a different host/port
-const STREAM_URL = "/chat/stream";
+const API_HOST = window.location.hostname;
+const API_PORT = 8000;
+const API_URL = `http://${API_HOST}:${API_PORT}/chat`;
+const STREAM_URL = `http://${API_HOST}:${API_PORT}/chat/stream`;
 
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");

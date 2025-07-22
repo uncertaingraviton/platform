@@ -5,6 +5,7 @@ from backend.config import get_context
 from backend.llm.openai import ChatGPT4oMiniLLM
 from backend.schemas import ChatRequest, ChatResponse
 import asyncio
+import re
 
 app = FastAPI(title="Reasoning Chatbot (ChatGPT-4o Mini)")
 
@@ -27,12 +28,16 @@ async def chat_endpoint(request: ChatRequest):
     """
     context = get_context()
     user_input = request.user_input.strip()
-    # Out-of-scope detection (basic): refuse if user input is clearly off-topic
     topic = str(context.get("roles", [{}])[0].get("system", "")).lower()
-    if "out-of-scope" in topic and not any(
-        kw.lower() in user_input.lower() for kw in topic.split("Topic:")[-1:]
-    ):
-        return ChatResponse(response="Out of scope. Please ask about today's topic only.", out_of_scope=True)
+    topic_value = topic.split("Topic:")[-1:].pop().split("•")[0].replace('"', '').strip() if "Topic:" in topic else ""
+    if "out-of-scope" in topic:
+        if topic_value == "greetings":
+            greetings = ["hi", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening", "yo", "sup", "what's up", "howdy"]
+            if not any(greet in user_input.lower() for greet in greetings):
+                return ChatResponse(response="Out of scope. Please ask about today's topic only.", out_of_scope=True)
+        else:
+            if topic_value and topic_value not in user_input.lower():
+                return ChatResponse(response="Out of scope. Please ask about today's topic only.", out_of_scope=True)
     # Call ChatGPT-4o Mini (non-streaming)
     try:
         chunks = []
@@ -49,8 +54,20 @@ async def chat_stream_endpoint(request: ChatRequest):
     """
     context = get_context()
     user_input = request.user_input.strip()
+    topic = str(context.get("roles", [{}])[0].get("system", "")).lower()
+    topic_value = topic.split("Topic:")[-1:].pop().split("•")[0].replace('"', '').strip() if "Topic:" in topic else ""
     async def event_stream():
         try:
+            if "out-of-scope" in topic:
+                if topic_value == "greetings":
+                    greetings = ["hi", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening", "yo", "sup", "what's up", "howdy"]
+                    if not any(greet in user_input.lower() for greet in greetings):
+                        yield "Out of scope. Please ask about today's topic only."
+                        return
+                else:
+                    if topic_value and topic_value not in user_input.lower():
+                        yield "Out of scope. Please ask about today's topic only."
+                        return
             async for chunk in llm.chat(context, user_input, stream=True):
                 yield chunk
         except Exception as e:
