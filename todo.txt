@@ -1,0 +1,9 @@
+ai is done 
+rev model is half done, will be done once the basic website is completed
+
+----
+
+first need to set flow model in stone and relate it to context.yaml
+next need to finish designing the ui/ux of the website along with supabase linking
+## need to figure out a sustainable model for design elements 
+finally testing 
