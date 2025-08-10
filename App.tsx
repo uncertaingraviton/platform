@@ -7,7 +7,7 @@ export default function App() {
     <div className="min-h-screen bg-white">
       <Header />
       <main
-        className="px-4 sm:px-6 py-6 sm:py-12 pb-20 sm:pb-24"
+        className="px-4 sm:px-6 py-6 sm:py-12 pb-28 sm:pb-32"
         style={{
           backgroundImage: `
             linear-gradient(rgba(156, 163, 175, 0.15) 1px, transparent 1px),
@@ -36,7 +36,7 @@ export default function App() {
 
             {/* Demo content to show scrolling */}
             <div className="mt-8 space-y-4">
-              {Array.from({ length: 20 }, (_, i) => (
+              {Array.from({ length: 10 }, (_, i) => (
                 <div
                   key={i}
                   className="p-4 bg-gray-50 rounded-md border border-gray-100"
