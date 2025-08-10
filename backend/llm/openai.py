@@ -7,8 +7,11 @@ from .base import LLMBase
 load_dotenv()
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+USE_FAKE = not OPENAI_API_KEY
+
 if not OPENAI_API_KEY:
-    raise RuntimeError("OPENAI_API_KEY environment variable not set.")
+    print("WARNING: OPENAI_API_KEY not set. Using mock responses for development/testing.")
+
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 OPENAI_MODEL = "gpt-4o"
 
@@ -21,10 +24,10 @@ class ChatGPT4oMiniLLM(LLMBase):
         max_tokens: int = 512,
         stream: bool = False,
     ) -> AsyncGenerator[str, None]:
-        """
-        Calls OpenAI ChatGPT-4o Mini API with the merged context and user input.
-        Yields response chunks if stream=True, else yields one full response.
-        """
+        if USE_FAKE:
+            # Return a fake response for frontend testing
+            yield f"[MOCK] You said: {user_input}"
+            return
         messages = []
         for role in context.get("roles", []):
             for k, v in role.items():
