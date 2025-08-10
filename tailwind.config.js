@@ -12,12 +12,6 @@ module.exports = {
     },
     extend: {
       colors: {
-        background: "#ffffff",
-        foreground: "#030213",
-        card: "#ffffff",
-        "card-foreground": "#030213",
-        popover: "#ffffff",
-        "popover-foreground": "#030213",
         primary: "#030213",
         "primary-foreground": "#ffffff",
         secondary: "#f8f9fa",
@@ -31,7 +25,6 @@ module.exports = {
         border: "#e5e7eb",
         input: "transparent",
         "input-background": "#f3f3f5",
-        "switch-background": "#cbced4",
         ring: "#e5e7eb",
       },
       fontSize: {

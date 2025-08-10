@@ -3,7 +3,6 @@ from typing import Optional
 
 class ChatRequest(BaseModel):
     user_input: str = Field(..., description="User's freeform thought or question.")
-    stream: Optional[bool] = Field(False, description="Whether to stream the response.")
 
 class ChatResponse(BaseModel):
     response: str = Field(..., description="Assistant's reply.")

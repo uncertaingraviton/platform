@@ -13,9 +13,9 @@ REM Print info
 echo ========================================
 echo Your local IP is: %LOCAL_IP%
 echo Starting backend (FastAPI) on 0.0.0.0:8000
-echo Starting frontend (Vite React) on 0.0.0.0:5173
+echo Starting frontend (Vite React) on 0.0.0.0:5174
 
-echo Access the app at: http://%LOCAL_IP%:5173 from your computer or phone (on the same WiFi)
+echo Access the app at: http://%LOCAL_IP%:5174 from your computer or phone (on the same WiFi)
 echo ========================================
 
 REM --- Start backend ---

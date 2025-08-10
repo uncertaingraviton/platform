@@ -10,7 +10,7 @@ export const DropdownMenuContent = React.forwardRef<
   <DropdownMenuPrimitive.Portal>
     <DropdownMenuPrimitive.Content
       ref={ref}
-      className={`z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-background p-1 shadow-md ${className}`}
+      className={`z-50 min-w-[8rem] overflow-hidden rounded-md border border-gray-200 bg-white p-1 shadow-md ${className}`}
       {...props}
     />
   </DropdownMenuPrimitive.Portal>
@@ -23,7 +23,7 @@ export const DropdownMenuItem = React.forwardRef<
 >(({ className = "", ...props }, ref) => (
   <DropdownMenuPrimitive.Item
     ref={ref}
-    className={`flex items-center px-2 py-2 rounded-md text-sm cursor-pointer hover:bg-muted/70 focus:bg-muted/70 transition-colors ${className}`}
+    className={`flex items-center px-2 py-2 rounded-md text-sm cursor-pointer hover:bg-gray-100 focus:bg-gray-100 transition-colors ${className}`}
     {...props}
   />
 ));

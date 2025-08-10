@@ -18,9 +18,9 @@ cat <<EOF
 ========================================
 Your local IP is: $LOCAL_IP
 Starting backend (FastAPI) on 0.0.0.0:8000
-Starting frontend (Vite React) on 0.0.0.0:5173
+Starting frontend (Vite React) on 0.0.0.0:5174
 
-Access the app at: http://$LOCAL_IP:5173 from your computer or phone (on the same WiFi)
+Access the app at: http://$LOCAL_IP:5174 from your computer or phone (on the same WiFi)
 ========================================
 EOF
 
