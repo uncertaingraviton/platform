@@ -1,9 +1,0 @@
-ai is done 
-rev model is half done, will finish later
-front end of front end is done need to finish according to need 
-flow and context basic idea is done need to change acc to need 
-
-----
-craft 1st escape ka design elements 
-supabase linking
-finally testing 

@@ -1,14 +1,17 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from backend.config import get_context
-from backend.llm.openai import ChatGPT4oMiniLLM
-from backend.schemas import ChatRequest, ChatResponse
+from config import get_context
+from llm.openai import ChatGPT4oMiniLLM
+from schemas import (
+    ChatRequest, ChatResponse, ProblemRequest, ProblemResponse
+)
+from problem_manager import ProblemManager
 import asyncio
 import re
 import httpx
 
-app = FastAPI(title="Reasoning Chatbot (ChatGPT-4o Mini)")
+app = FastAPI(title="AI Problem Solver - Single Problem Mode")
 
 # Allow embedding in any site (adjust origins as needed)
 app.add_middleware(
@@ -20,66 +23,127 @@ app.add_middleware(
 )
 
 llm = ChatGPT4oMiniLLM()
+problem_manager = ProblemManager()
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     """
-    Accepts user input, merges with daily context, and returns ChatGPT-4o Mini response.
-    Stateless: does not store user data.
+    Enhanced chat endpoint that evaluates solutions against the current problem.
     """
-    context = get_context()
     user_input = request.user_input.strip()
-    topic = str(context.get("roles", [{}])[0].get("system", "")).lower()
-    topic_value = topic.split("Topic:")[-1:].pop().split("•")[0].replace('"', '').strip() if "Topic:" in topic else ""
-    if "out-of-scope" in topic:
-        if topic_value == "greetings":
-            greetings = ["hi", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening", "yo", "sup", "what's up", "howdy"]
-            if not any(greet in user_input.lower() for greet in greetings):
-                return ChatResponse(response="Out of scope. Please ask about today's topic only.", out_of_scope=True)
+    
+    # Check if user wants to see the current problem
+    if any(keyword in user_input.lower() for keyword in ["show problem", "current problem", "what problem", "problem info"]):
+        current_problem = problem_manager.get_active_problem_info()
+        if current_problem:
+            problem_info = f"🎯 Current Problem: {current_problem['title']}\n\n📝 {current_problem['description']}\n\n📊 Difficulty: {current_problem['difficulty_level']}\n🏷️ Category: {current_problem['category']}"
+            return ChatResponse(
+                response=problem_info,
+                solution_evaluated=False
+            )
         else:
-            if topic_value and topic_value not in user_input.lower():
-                return ChatResponse(response="Out of scope. Please ask about today's topic only.", out_of_scope=True)
-    # Call ChatGPT-4o Mini (non-streaming)
+            return ChatResponse(
+                response="No active problem is currently set.",
+                solution_evaluated=False
+            )
+    
+    # Check if user wants to see available problems (admin function)
+    if any(keyword in user_input.lower() for keyword in ["available problems", "list problems", "all problems"]):
+        available_problems = problem_manager.get_available_problems()
+        problem_list = "\n".join([f"- {p.title} (ID: {p.id})" for p in available_problems])
+        
+        return ChatResponse(
+            response=f"Available problems:\n{problem_list}\n\nTo change the active problem, an admin should use the /admin/set-problem endpoint.",
+            solution_evaluated=False
+        )
+    
+    # Handle solution evaluation
     try:
-        chunks = []
-        async for chunk in llm.chat(context, user_input, stream=False):
-            chunks.append(chunk)
-        return ChatResponse(response="".join(chunks))
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 429:
-            return ChatResponse(response="Too many requests. Please wait a moment and try again.", out_of_scope=False)
-        raise HTTPException(status_code=500, detail=str(e))
+        response = problem_manager.evaluate_solution(user_input)
+        return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat/stream")
 async def chat_stream_endpoint(request: ChatRequest):
     """
-    Streaming endpoint for chat (yields response chunks).
+    Streaming endpoint for chat with solution evaluation.
     """
-    context = get_context()
     user_input = request.user_input.strip()
-    topic = str(context.get("roles", [{}])[0].get("system", "")).lower()
-    topic_value = topic.split("Topic:")[-1:].pop().split("•")[0].replace('"', '').strip() if "Topic:" in topic else ""
-    async def event_stream():
-        try:
-            if "out-of-scope" in topic:
-                if topic_value == "greetings":
-                    greetings = ["hi", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening", "yo", "sup", "what's up", "howdy"]
-                    if not any(greet in user_input.lower() for greet in greetings):
-                        yield "Out of scope. Please ask about today's topic only."
-                        return
-                else:
-                    if topic_value and topic_value not in user_input.lower():
-                        yield "Out of scope. Please ask about today's topic only."
-                        return
-            async for chunk in llm.chat(context, user_input, stream=True):
-                yield chunk
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 429:
-                yield "Too many requests. Please wait a moment and try again."
-                return
+    
+    # Check if user wants to see the current problem
+    if any(keyword in user_input.lower() for keyword in ["show problem", "current problem", "what problem", "problem info"]):
+        current_problem = problem_manager.get_active_problem_info()
+        if current_problem:
+            problem_info = f"🎯 Current Problem: {current_problem['title']}\n\n📝 {current_problem['description']}\n\n📊 Difficulty: {current_problem['difficulty_level']}\n🏷️ Category: {current_problem['category']}"
+            async def problem_stream():
+                yield problem_info
+            return StreamingResponse(problem_stream(), media_type="text/plain")
+        else:
+            async def no_problem_stream():
+                yield "No active problem is currently set."
+            return StreamingResponse(no_problem_stream(), media_type="text/plain")
+    
+    # Check if user wants to see available problems
+    if any(keyword in user_input.lower() for keyword in ["available problems", "list problems", "all problems"]):
+        available_problems = problem_manager.get_available_problems()
+        problem_list = "\n".join([f"- {p.title} (ID: {p.id})" for p in available_problems])
+        
+        async def problems_stream():
+            yield f"Available problems:\n{problem_list}\n\nTo change the active problem, an admin should use the /admin/set-problem endpoint."
+        return StreamingResponse(problems_stream(), media_type="text/plain")
+    
+    # Handle solution evaluation with streaming feedback
+    try:
+        response = problem_manager.evaluate_solution(user_input)
+        
+        async def solution_stream():
+            yield response.response
+        
+        return StreamingResponse(solution_stream(), media_type="text/plain")
+        
+    except Exception as e:
+        async def error_stream():
             yield f"[ERROR] {str(e)}"
-        except Exception as e:
-            yield f"[ERROR] {str(e)}"
-    return StreamingResponse(event_stream(), media_type="text/plain") 
+        return StreamingResponse(error_stream(), media_type="text/plain")
+
+@app.get("/problem/current")
+async def get_current_problem():
+    """Get information about the currently active problem"""
+    current_problem = problem_manager.get_active_problem_info()
+    if not current_problem:
+        raise HTTPException(status_code=404, detail="No active problem found")
+    
+    return current_problem
+
+@app.get("/problems")
+async def get_available_problems():
+    """Get list of available problems (admin function)"""
+    problems = problem_manager.get_available_problems()
+    return {"problems": [problem.dict() for problem in problems]}
+
+@app.post("/admin/set-problem")
+async def set_active_problem(request: ProblemRequest):
+    """Admin endpoint to change the active problem"""
+    try:
+        problem = problem_manager.set_active_problem(request.problem_id)
+        return ProblemResponse(
+            current_problem=problem,
+            message=f"Active problem changed to: {problem.title}"
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/ai-flow/config")
+async def get_ai_flow_config():
+    """Get AI flow configuration for the current problem"""
+    current_problem = problem_manager.get_current_problem()
+    if not current_problem:
+        raise HTTPException(status_code=404, detail="No active problem found")
+    
+    return {
+        "global_config": problem_manager.get_ai_flow_config(),
+        "problem_specific": current_problem.ai_flow.dict() if current_problem.ai_flow else None
+    } 
