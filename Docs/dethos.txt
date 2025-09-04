@@ -2,4 +2,4 @@ an overarching design system that is flexible.
 an omnipresent set of design choices that is first recognised by the subconcious and
 is associated to the brand.
 BUT, all the while being flexible enough to accomodate breathing room and creative
-freedom and immersion.
+freedom for immersion.
