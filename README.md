@@ -78,4 +78,4 @@ This simplified version removes:
 Users can type these commands in the chat:
 - `"show problem"` - Display current problem information
 - `"available problems"` - List all available problems
-- Any other text is treated as a solution for evaluation
+- Any other text is treated as a solution for evaluation`
