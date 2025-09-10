@@ -19,10 +19,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error('Error getting session:', error)
+      }
       setSession(data.session)
       setUser(data.session?.user ?? null)
       setInitialized(true)
+    }).catch((error) => {
+      console.error('Error initializing auth:', error)
+      setInitialized(true) // Still set initialized to show the app
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -71,7 +77,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getAccessToken,
   }), [user, session])
 
-  if (!initialized) return null
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <AuthContext.Provider value={value}>
