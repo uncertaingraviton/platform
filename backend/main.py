@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from config import get_context
@@ -10,6 +10,66 @@ from problem_manager import ProblemManager
 import asyncio
 import re
 import httpx
+import os
+import time
+import json
+from typing import Dict, Any
+from jose import jwt
+import requests
+
+
+SUPABASE_PROJECT_ID = os.getenv("SUPABASE_PROJECT_ID", "jzkdmtsfxpdpgwymzxbq")
+JWKS_URL = f"https://{SUPABASE_PROJECT_ID}.supabase.co/auth/v1/certs"
+
+_JWKS_CACHE: Dict[str, Any] = {"keys": [], "fetched_at": 0}
+
+def _get_jwks() -> Dict[str, Any]:
+    now = int(time.time())
+    # Refresh every 10 minutes
+    if now - _JWKS_CACHE["fetched_at"] > 600 or not _JWKS_CACHE["keys"]:
+        resp = requests.get(JWKS_URL, timeout=5)
+        resp.raise_for_status()
+        _JWKS_CACHE["keys"] = resp.json().get("keys", [])
+        _JWKS_CACHE["fetched_at"] = now
+    return {"keys": _JWKS_CACHE["keys"]}
+
+def _get_public_key_from_kid(kid: str):
+    jwks = _get_jwks()
+    for key in jwks["keys"]:
+        if key.get("kid") == kid:
+            return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
+    return None
+
+async def require_auth(request: Request):
+    auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    token = auth_header.split(" ", 1)[1]
+
+    try:
+        headers = jwt.get_unverified_header(token)
+        kid = headers.get("kid")
+        if not kid:
+            raise HTTPException(status_code=401, detail="Invalid token header")
+        public_key = _get_public_key_from_kid(kid)
+        if not public_key:
+            # refresh and try again once
+            _JWKS_CACHE["fetched_at"] = 0
+            public_key = _get_public_key_from_kid(kid)
+        if not public_key:
+            raise HTTPException(status_code=401, detail="Unable to find signing key")
+
+        payload = jwt.decode(
+            token,
+            public_key,
+            algorithms=["RS256"],
+            audience=None,
+            options={"verify_aud": False}
+        )
+        request.state.user = payload
+        return payload
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
 
 app = FastAPI(title="AI Problem Solver - Single Problem Mode")
 
@@ -26,7 +86,7 @@ llm = ChatGPT4oMiniLLM()
 problem_manager = ProblemManager()
 
 @app.post("/chat", response_model=ChatResponse)
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, user=Depends(require_auth)):
     """
     Enhanced chat endpoint that evaluates solutions against the current problem.
     """
@@ -65,7 +125,7 @@ async def chat_endpoint(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/chat/stream")
-async def chat_stream_endpoint(request: ChatRequest):
+async def chat_stream_endpoint(request: ChatRequest, user=Depends(require_auth)):
     """
     Streaming endpoint for chat with solution evaluation.
     """

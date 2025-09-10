@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Target, Info } from 'lucide-react'
 import { Button } from './ui/Button'
+import { useAuth } from '../src/context/AuthContext'
 import { Input } from './ui/Input'
 
 interface Message {
@@ -21,6 +22,7 @@ interface Problem {
 }
 
 export function ChatBot() {
+  const { session, getAccessToken } = useAuth()
   const [messages, setMessages] = useState<Message[]>([])
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -81,6 +83,10 @@ export function ChatBot() {
 
   const handleSendMessage = async () => {
     if (!message.trim() || isLoading) return
+    if (!session) {
+      setMessages(prev => [...prev, { id: Date.now(), text: 'Please sign in to chat.', isUser: false, timestamp: new Date() }])
+      return
+    }
 
     const userMessage: Message = {
       id: Date.now(),
@@ -102,10 +108,12 @@ export function ChatBot() {
         user_input: message
       }
 
+      const token = await getAccessToken()
       const response = await fetch('http://localhost:8000/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(requestBody),
       })
@@ -176,10 +184,12 @@ export function ChatBot() {
 
   const showProblemInfo = async () => {
     try {
+      const token = await getAccessToken()
       const response = await fetch('http://localhost:8000/chat/stream', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ user_input: "show problem" }),
       })
@@ -280,6 +290,11 @@ export function ChatBot() {
 
           {/* Input Area - Always Visible */}
           <div className="p-3 sm:p-4">
+            {!session ? (
+              <div className="text-sm text-gray-700">
+                Please sign in to send messages.
+              </div>
+            ) : (
             <div className="flex gap-2 sm:gap-3">
               <Input
                 value={message}
@@ -298,6 +313,7 @@ export function ChatBot() {
                 <Send className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </Button>
             </div>
+            )}
           </div>
         </div>
       </div>

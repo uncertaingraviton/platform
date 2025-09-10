@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.10",
+    "@supabase/supabase-js": "^2.57.4",
     "lucide-react": "^0.292.0",
     "pydantic": "^0.0.1-security",
     "react": "^18.2.0",

@@ -1,12 +1,18 @@
-import { User, UserCircle, History } from 'lucide-react'
+import { User, UserCircle, History, LogOut, LogIn } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/DropdownMenu"
+import AuthModal from './ui/AuthModal'
+
+import { useState } from 'react'
+import { useAuth } from '../src/context/AuthContext'
 
 export function Header() {
+  const { user, signOut } = useAuth()
+  const [showAuth, setShowAuth] = useState(false)
   const handleProfileClick = () => {
     console.log('Profile clicked')
     // Add profile navigation logic here
@@ -36,18 +42,32 @@ export function Header() {
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
-                <UserCircle className="w-4 h-4 mr-2" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleHistoryClick} className="cursor-pointer">
-                <History className="w-4 h-4 mr-2" />
-                History
-              </DropdownMenuItem>
+              {user ? (
+                <>
+                  <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
+                    <UserCircle className="w-4 h-4 mr-2" />
+                    {user.email}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleHistoryClick} className="cursor-pointer">
+                    <History className="w-4 h-4 mr-2" />
+                    History
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign out
+                  </DropdownMenuItem>
+                </>
+              ) : (
+                <DropdownMenuItem onClick={() => setShowAuth(true)} className="cursor-pointer">
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign in
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+      <AuthModal open={showAuth && !user} onClose={() => setShowAuth(false)} />
     </header>
   )
 }
