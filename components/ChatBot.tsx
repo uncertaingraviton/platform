@@ -292,7 +292,7 @@ export function ChatBot() {
           <div className="p-3 sm:p-4">
             {!session ? (
               <div className="text-sm text-gray-700">
-                Please sign in to send messages.
+                Please sign in to start!
               </div>
             ) : (
             <div className="flex gap-2 sm:gap-3">
